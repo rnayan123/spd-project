@@ -12,6 +12,35 @@ import {
 } from "react-native";
 import { ref, push, update, serverTimestamp } from "firebase/database";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import ImagePicker from "react-native-image-picker";
+import {
+  
+  uploadBytes,
+  getDownloadURL,
+} from "firebase/database";
+import { getStorage, ref as storageRef, uploadFile } from "firebase/storage";
+
+
+const pickLabReportImage = () => {
+  const options = {
+    title: "Select Lab Report Image",
+    storageOptions: {
+      skipBackup: true,
+      path: "images",
+    },
+  };
+
+  ImagePicker.showImagePicker(options, (response) => {
+    if (response.didCancel) {
+      console.log("User cancelled image picker");
+    } else if (response.error) {
+      console.log("ImagePicker Error:", response.error);
+    } else {
+      setLabReportImage(response.uri);
+    }
+  });
+};
+
 
 import AuthContext from "../../AuthContext";
 import { database } from "../../firebaseConfig";
@@ -20,6 +49,7 @@ const AddPatient = () => {
   const authContext = useContext(AuthContext);
   const [date, setDate] = useState(new Date());
   const [show, setShow] = useState(false);
+  const [labReportImage, setLabReportImage] = useState(null);
   const [formData, setFormData] = useState({
     patientName: "",
     appointmentDate: "",
@@ -104,23 +134,51 @@ const AddPatient = () => {
     setShow(true);
   };
 
-  const myFirebase = async () => {
-    try {
-      if (!formData.appointmentDate) {
-        console.error("Invalid appointment date");
-        return;
-      }
+ const myFirebase = async () => {
+   try {
+     if (!formData.appointmentDate) {
+       console.error("Invalid appointment date");
+       return;
+     }
 
-      const newPatientKey = push(ref(database, "patients")).key;
-      const updates = {};
-      updates[`/patients/${newPatientKey}`] = formData;
-      await update(ref(database), updates);
+     // Create a new patient key
+     const newPatientKey = push(ref(database, "patients")).key;
 
-      console.log("Patient added successfully!");
-    } catch (error) {
-      console.error("Error adding patient:", error.message);
-    }
-  };
+     // Update patient data in the database
+     const updates = {};
+     updates[`/patients/${newPatientKey}`] = formData;
+     await update(ref(database), updates);
+
+     console.log("Patient added successfully!");
+
+     // Upload lab report image
+     if (labReportImage) {
+       try {
+         const storage = getStorage();
+         const labReportRef = storageRef(
+           storage,
+           `lab_reports/${newPatientKey}`
+         );
+
+         // Assuming uploadFile is a function to upload the lab report
+         await uploadFile(labReportRef, labReportImage);
+
+         // Get download URL of the uploaded lab report
+         const downloadURL = await getDownloadURL(labReportRef);
+
+         // Update formData with the lab report URL
+         setFormData({ ...formData, labReportURL: downloadURL });
+
+         console.log("Lab report uploaded successfully!");
+       } catch (labReportError) {
+         console.error("Error uploading lab report:", labReportError.message);
+       }
+     }
+   } catch (error) {
+     console.error("Error adding patient:", error.message);
+   }
+ };
+
 
   return (
     <View style={styles.container}>
@@ -208,6 +266,11 @@ const AddPatient = () => {
               }
             />
           </View>
+          <View style={{ alignItems: "center" }}>
+  <TouchableOpacity style={styles.button} onPress={pickLabReportImage}>
+    <Text style={styles.buttonText}>Pick Lab Report Image</Text>
+  </TouchableOpacity>
+</View>
 
           <View style={{ alignItems: "center" }}>
             <TouchableOpacity
