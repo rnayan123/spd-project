@@ -137,8 +137,10 @@ const PatientDetails = ({ route }) => {
             editable={false}
           />
         </View>
+        
       </ScrollView>
     </View>
+    
   );
 };
 

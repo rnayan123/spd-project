@@ -9,12 +9,18 @@ import AuthContext from "./AuthContext";
 import BottomTabNavigation from "./src/BottomTabNavigation";
 import PatientDetails from "./src/screens/PatientDetails";
 import { auth } from "./firebaseConfig";
+import { storage, ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+import { database, push, update } from "firebase/database";
+import firebase from 'firebase/app';
+import 'firebase/database';
+
 
 const Stack = createNativeStackNavigator();
 
 export default function App() {
-  const [user, setUser] = useState("");
-  const [loader, setLoader] = useState(true);
+  
+  const [user, setUser] = useState(null);
+  const [loader, setLoader] = useState(false);
 
   useEffect(() => {
     auth.onAuthStateChanged((user) => {
@@ -53,9 +59,11 @@ export default function App() {
         <ActivityIndicator animating={loader} size="large" />
       </View>
     );
+    
   }
 
   return (
+    
     <AuthContext.Provider value={value}>
       <NavigationContainer>
         <Stack.Navigator
@@ -72,5 +80,7 @@ export default function App() {
         </Stack.Navigator>
       </NavigationContainer>
     </AuthContext.Provider>
+
+
   );
 }

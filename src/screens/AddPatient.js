@@ -12,39 +12,22 @@ import {
 } from "react-native";
 import { ref, push, update, serverTimestamp } from "firebase/database";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import ImagePicker from "react-native-image-picker";
+// import ImagePicker from "react-native-image-picker";
 import { uploadBytes, getDownloadURL } from "firebase/database";
-import { getStorage, ref as storageRef, uploadFile } from "firebase/storage";
-import LabReportUpload from "./LabReportUpload";
+import { getStorage, uploadFile, uploadBytesResumable } from "firebase/storage";
 
-const pickLabReportImage = (setLabReportImage) => {
-  const options = {
-    title: "Select Lab Report Image",
-    storageOptions: {
-      skipBackup: true,
-      path: "images",
-    },
-  };
 
-  ImagePicker.showImagePicker(options, (response) => {
-    if (response.didCancel) {
-      console.log("User cancelled image picker");
-    } else if (response.error) {
-      console.log("ImagePicker Error:", response.error);
-    } else {
-      setLabReportImage(response.uri);
-    }
-  });
-};
+
 
 import AuthContext from "../../AuthContext";
 import { database } from "../../firebaseConfig";
+import { launchImageLibraryAsync } from "expo-image-picker";
 
 const AddPatient = () => {
   const authContext = useContext(AuthContext);
   const [date, setDate] = useState(new Date());
   const [show, setShow] = useState(false);
-  const [labReportImage, setLabReportImage] = useState(null);
+  const [img, setimg] = useState(null);
   const [formData, setFormData] = useState({
     patientName: "",
     appointmentDate: "",
@@ -125,6 +108,22 @@ const AddPatient = () => {
     });
   };
 
+const pickLabReportImage = async () => {
+  try {
+    const result = await launchImageLibraryAsync({});
+    if (!result.cancelled) {
+      const selectedImage = result.assets[0].uri;
+      console.log("Selected Lab Report Image:", selectedImage);
+      // Now, you can call the handleImageUpload function with the selected image
+      setimg(selectedImage);
+    }
+    
+  } catch (error) {
+    console.error("Error picking lab report image:", error);
+  }
+};
+
+
   const showDatePicker = () => {
     setShow(true);
   };
@@ -147,32 +146,14 @@ const AddPatient = () => {
       console.log("Patient added successfully!");
 
       // Upload lab report image
-      if (labReportImage) {
-        try {
-          const storage = getStorage();
-          const labReportRef = storageRef(
-            storage,
-            `lab_reports/${newPatientKey}`
-          );
-
-          // Assuming uploadFile is a function to upload the lab report
-          await uploadFile(labReportRef, labReportImage);
-
-          // Get download URL of the uploaded lab report
-          const downloadURL = await getDownloadURL(labReportRef);
-
-          // Update formData with the lab report URL
-          setFormData({ ...formData, labReportURL: downloadURL });
-
-          console.log("Lab report uploaded successfully!");
-        } catch (labReportError) {
-          console.error("Error uploading lab report:", labReportError.message);
-        }
-      }
-    } catch (error) {
-      console.error("Error adding patient:", error.message);
-    }
-  };
+      
+    } 
+    catch (error) {
+    console.error("Error adding imaage:", error);
+  }
+};
+  
+    
 
   return (
     <View style={styles.container}>
@@ -263,7 +244,7 @@ const AddPatient = () => {
           <View style={{ alignItems: "center" }}>
             <TouchableOpacity
               style={styles.button}
-              onPress={() => pickLabReportImage(setLabReportImage)}
+              onPress={pickLabReportImage}
             >
               <Text style={styles.buttonText}>Pick Lab Report Image</Text>
             </TouchableOpacity>
