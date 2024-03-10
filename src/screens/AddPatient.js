@@ -10,34 +10,37 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
-import { ref, push, update, serverTimestamp } from "firebase/database";
+import {
+  push,
+  update,
+  serverTimestamp,
+  ref,
+  uploadBytes,
+} from "firebase/database";
+import { storage } from "../../firebaseConfig";
 import DateTimePicker from "@react-native-community/datetimepicker";
-// import ImagePicker from "react-native-image-picker";
-import { uploadBytes, getDownloadURL } from "firebase/database";
-import { getStorage, uploadFile, uploadBytesResumable } from "firebase/storage";
-
-
-
-
-import AuthContext from "../../AuthContext";
-import { database } from "../../firebaseConfig";
 import { launchImageLibraryAsync } from "expo-image-picker";
+import { StatusBar } from "expo-status-bar";
+import AuthContext from "../../AuthContext";
+import "@firebase/storage";
 
 const AddPatient = () => {
   const authContext = useContext(AuthContext);
   const [date, setDate] = useState(new Date());
   const [show, setShow] = useState(false);
-  const [img, setimg] = useState(null);
   const [formData, setFormData] = useState({
     patientName: "",
     appointmentDate: "",
     patientPhoneNumber: "",
     patientDisease: "",
-    cost: "",
+    age: "",
+    weight: "",
+    height: "",
     prescription: "",
     dateOfArrival: serverTimestamp(),
     doctorID: authContext.user,
   });
+  const [image, setImage] = useState("");
 
   const styles = StyleSheet.create({
     container: {
@@ -108,32 +111,34 @@ const AddPatient = () => {
     });
   };
 
-const pickLabReportImage = async () => {
-  try {
-    const result = await launchImageLibraryAsync({});
-    if (!result.cancelled) {
-      const selectedImage = result.assets[0].uri;
-      console.log("Selected Lab Report Image:", selectedImage);
-      // Now, you can call the handleImageUpload function with the selected image
-      setimg(selectedImage);
-    }
-    
-  } catch (error) {
-    console.error("Error picking lab report image:", error);
-  }
-};
-
-
   const showDatePicker = () => {
     setShow(true);
   };
 
-  const myFirebase = async () => {
+  const pickImage = async () => {
     try {
-      if (!formData.appointmentDate) {
-        console.error("Invalid appointment date");
+      const result = await launchImageLibraryAsync();
+
+      console.log("Image Picker Result:", result);
+
+      if (!result.cancelled) {
+        const selectedImage = result.assets[0].uri; // Use 'assets' property
+        setImage(selectedImage);
+      }
+    } catch (error) {
+      console.error("Error picking image:", error);
+    }
+  };
+
+  const submitData = async () => {
+    try {
+      if (!image) {
+        console.error("Image is not selected");
         return;
       }
+
+      const storageRef = ref(storage, `patientImages/${Date.now().toString()}`);
+      await uploadBytes(storageRef, image);
 
       // Create a new patient key
       const newPatientKey = push(ref(database, "patients")).key;
@@ -145,15 +150,24 @@ const pickLabReportImage = async () => {
 
       console.log("Patient added successfully!");
 
-      // Upload lab report image
-      
-    } 
-    catch (error) {
-    console.error("Error adding imaage:", error);
-  }
-};
-  
-    
+      // Reset the form data and image state after submission
+      setFormData({
+        patientName: "",
+        appointmentDate: "",
+        patientPhoneNumber: "",
+        patientDisease: "",
+        age: "",
+        weight: "",
+        height: "",
+        prescription: "",
+        dateOfArrival: serverTimestamp(),
+        doctorID: authContext.user,
+      });
+      setImage("");
+    } catch (error) {
+      console.error("Error adding patient:", error);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -210,14 +224,14 @@ const pickLabReportImage = async () => {
           <View>
             <TextInput
               style={styles.input}
-              placeholder="age"
+              placeholder="Age"
               onChangeText={(text) => setFormData({ ...formData, age: text })}
             />
           </View>
           <View>
             <TextInput
               style={styles.input}
-              placeholder="weight"
+              placeholder="Weight"
               onChangeText={(text) =>
                 setFormData({ ...formData, weight: text })
               }
@@ -226,7 +240,7 @@ const pickLabReportImage = async () => {
           <View>
             <TextInput
               style={styles.input}
-              placeholder="height"
+              placeholder="Height"
               onChangeText={(text) =>
                 setFormData({ ...formData, height: text })
               }
@@ -241,20 +255,21 @@ const pickLabReportImage = async () => {
               }
             />
           </View>
-          <View style={{ alignItems: "center" }}>
-            <TouchableOpacity
-              style={styles.button}
-              onPress={pickLabReportImage}
-            >
-              <Text style={styles.buttonText}>Pick Lab Report Image</Text>
+
+          <View style={styles.container}>
+            <TouchableOpacity onPress={pickImage}>
+              <Text>Pick Image</Text>
             </TouchableOpacity>
+            {image && (
+              <Image
+                source={{ uri: image }}
+                style={{ width: 200, height: 200 }}
+              />
+            )}
           </View>
 
           <View style={{ alignItems: "center" }}>
-            <TouchableOpacity
-              style={styles.button}
-              onPress={() => myFirebase()}
-            >
+            <TouchableOpacity style={styles.button} onPress={submitData}>
               <Text style={styles.buttonText}>Add</Text>
             </TouchableOpacity>
           </View>
