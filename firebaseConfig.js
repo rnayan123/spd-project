@@ -1,18 +1,9 @@
-// Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
-import {
-  initializeAuth,
-  getReactNativePersistence,
-} from "firebase/auth/react-native";
-// import firebase from "firebase/compat/app";
-// import "firebase/compat/database";
 import { getDatabase } from "firebase/database";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getStorage } from "firebase/storage";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+import { getAuth } from "firebase/auth";
+import { getFirestore } from "firebase/firestore/lite";
 
-// Your web app's Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyAIcTRKPgMn4g6bfObi8H6dMiYXcysteH0",
   authDomain: "healthmate-e9565.firebaseapp.com",
@@ -24,18 +15,10 @@ const firebaseConfig = {
   measurementId: "G-RJS0V4623D",
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
- const storage=getStorage(app);
 const database = getDatabase(app);
+const storage = getStorage(app);
+const auth = getAuth(app);
+const firestore = getFirestore(app);
 
-// Initialize Firebase Authentication and get a reference to the service
-// initialize auth
-const auth = initializeAuth(app, {
-  persistence: getReactNativePersistence(AsyncStorage),
-});
-
-// Initialize Realtime Database and get a reference to the service
-
-
-export { auth, database,storage };
+export { database, storage, auth, firestore };

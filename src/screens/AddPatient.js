@@ -10,19 +10,20 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
-import {
-  push,
-  update,
-  serverTimestamp,
-  ref,
-  uploadBytes,
-} from "firebase/database";
+import { push, update, serverTimestamp, ref } from "firebase/database";
 import { storage } from "../../firebaseConfig";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { launchImageLibraryAsync } from "expo-image-picker";
-import { StatusBar } from "expo-status-bar";
 import AuthContext from "../../AuthContext";
-import "@firebase/storage";
+import { database } from "../../firebaseConfig";
+import { ref as sRef } from "firebase/storage";
+import { uploadBytes } from "firebase/storage";
+import { getDownloadURL } from "firebase/storage";
+// import RNFS from "react-native-fs";
+
+import * as FileSystem from "expo-file-system";
+import { Asset } from "expo-asset";
+import { useEffect } from "react";
 
 const AddPatient = () => {
   const authContext = useContext(AuthContext);
@@ -40,7 +41,8 @@ const AddPatient = () => {
     dateOfArrival: serverTimestamp(),
     doctorID: authContext.user,
   });
-  const [image, setImage] = useState("");
+  const [image, setImage] = useState(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   const styles = StyleSheet.create({
     container: {
@@ -92,6 +94,7 @@ const AddPatient = () => {
       paddingHorizontal: 20,
       borderRadius: 5,
       alignItems: "center",
+      marginTop: 10,
     },
     buttonText: {
       color: "#ffffff",
@@ -100,6 +103,18 @@ const AddPatient = () => {
       fontSize: 18,
     },
   });
+
+  // useEffect(() => {
+  //   async function requestPermissions() {
+  //     const { status } =
+  //       await ImagePicker.requestMediaLibraryPermissionsAsync();
+  //     if (status !== "granted") {
+  //       console.error("Media library permission not granted");
+  //     }
+  //   }
+
+  //   requestPermissions();
+  // }, []);
 
   const handleDateChange = (event, selectedDate) => {
     const currentDate = selectedDate || date;
@@ -115,6 +130,30 @@ const AddPatient = () => {
     setShow(true);
   };
 
+  // const pickImage = async () => {
+  //   try {
+  //     const result = await launchImageLibraryAsync();
+
+  //     console.log("Image Picker Result:", result);
+
+  //     if (!result.cancelled) {
+  //       const selectedImage = result.assets[0].uri; // Use 'assets' property
+  //       console.log("Selected Image URI:", selectedImage);
+  //       // RNFS.readFile(selectedImage, "utf8")
+  //       //   .then((contents) => {
+  //       //     // setFileContents(contents);
+  //       //     console.log(contents);
+  //       //   })
+  //       //   .catch((err) => {
+  //       //     console.log(err.message);
+  //       //   });
+  //       setImage(selectedImage);
+  //     }
+  //   } catch (error) {
+  //     console.error("Error picking image:", error);
+  //   }
+  // };
+
   const pickImage = async () => {
     try {
       const result = await launchImageLibraryAsync();
@@ -122,35 +161,59 @@ const AddPatient = () => {
       console.log("Image Picker Result:", result);
 
       if (!result.cancelled) {
-        const selectedImage = result.assets[0].uri; // Use 'assets' property
-        setImage(selectedImage);
+        const asset = result.assets[0];
+        const fileUri = Asset.fromModule(asset.uri).uri;
+        setImage(fileUri);
       }
     } catch (error) {
       console.error("Error picking image:", error);
     }
   };
 
-  const submitData = async () => {
+  const uploadImage = async (imageUri) => {
     try {
-      if (!image) {
-        console.error("Image is not selected");
-        return;
+      const fileName = `patientImage_${Date.now().toString()}.jpg`;
+
+      const storageRef = sRef(storage, `patientImages/${fileName}`);
+
+      const metadata = {
+        contentType: "image/jpeg",
+      };
+
+      await uploadBytes(storageRef, imageUri, metadata);
+
+      const imageUrl = await getDownloadURL(storageRef);
+      console.log("Image uploaded successfully. URL:", imageUrl);
+
+      return imageUrl;
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      throw error;
+    }
+  };
+
+  const handleAddPatient = async () => {
+    try {
+      // Trigger image upload only if an image is selected
+      if (image) {
+        setIsUploading(true);
+        const imageUrl = await uploadImage(image);
+        setIsUploading(false);
+
+        setFormData({
+          ...formData,
+          imageUrl,
+        });
       }
 
-      const storageRef = ref(storage, `patientImages/${Date.now().toString()}`);
-      await uploadBytes(storageRef, image);
-
-      // Create a new patient key
       const newPatientKey = push(ref(database, "patients")).key;
 
-      // Update patient data in the database
       const updates = {};
       updates[`/patients/${newPatientKey}`] = formData;
       await update(ref(database), updates);
 
       console.log("Patient added successfully!");
 
-      // Reset the form data and image state after submission
       setFormData({
         patientName: "",
         appointmentDate: "",
@@ -160,10 +223,9 @@ const AddPatient = () => {
         weight: "",
         height: "",
         prescription: "",
-        dateOfArrival: serverTimestamp(),
         doctorID: authContext.user,
       });
-      setImage("");
+      setImage(null);
     } catch (error) {
       console.error("Error adding patient:", error);
     }
@@ -231,7 +293,7 @@ const AddPatient = () => {
           <View>
             <TextInput
               style={styles.input}
-              placeholder="Weight"
+              placeholder="Weight(in kg)"
               onChangeText={(text) =>
                 setFormData({ ...formData, weight: text })
               }
@@ -240,7 +302,7 @@ const AddPatient = () => {
           <View>
             <TextInput
               style={styles.input}
-              placeholder="Height"
+              placeholder="Height (in meter)"
               onChangeText={(text) =>
                 setFormData({ ...formData, height: text })
               }
@@ -263,16 +325,16 @@ const AddPatient = () => {
             {image && (
               <Image
                 source={{ uri: image }}
-                style={{ width: 200, height: 200 }}
+                style={{ width: 200, height: 200, marginTop: 10 }}
               />
             )}
           </View>
 
-          <View style={{ alignItems: "center" }}>
-            <TouchableOpacity style={styles.button} onPress={submitData}>
-              <Text style={styles.buttonText}>Add</Text>
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity style={styles.button} onPress={handleAddPatient}>
+            <Text style={styles.buttonText}>
+              {isUploading ? "Adding Patient..." : "Add Patient"}
+            </Text>
+          </TouchableOpacity>
         </KeyboardAvoidingView>
       </ScrollView>
     </View>
