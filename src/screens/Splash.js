@@ -11,7 +11,7 @@ const Splash = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <Image source={require("../../assets/splash.png")} />
-      <Text style={styles.titleText}>Patient Tracker App</Text>
+      <Text style={styles.titleText}>Healthmate App</Text>
     </View>
   );
 };

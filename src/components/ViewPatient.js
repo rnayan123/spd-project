@@ -32,6 +32,10 @@ const CATEGORYDATA = [
     id: 7,
     disease: "Fever",
   },
+  {
+    id:8,
+    disease: "covid"
+  },
 ];
 
 const ViewPatient = ({ navigation, searchText, patientData, selectedDate }) => {

@@ -52,6 +52,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontStyle: "italic",
     color: "#8C8FA5",
+    
     paddingBottom: 3,
   },
   date: {

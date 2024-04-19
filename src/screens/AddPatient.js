@@ -16,7 +16,7 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import { launchImageLibraryAsync } from "expo-image-picker";
 import AuthContext from "../../AuthContext";
 import { database } from "../../firebaseConfig";
-import { ref as sRef } from "firebase/storage";
+import { getStorage, ref as sRef } from "firebase/storage";
 import { uploadBytes } from "firebase/storage";
 import { getDownloadURL } from "firebase/storage";
 // import RNFS from "react-native-fs";
@@ -104,17 +104,7 @@ const AddPatient = () => {
     },
   });
 
-  // useEffect(() => {
-  //   async function requestPermissions() {
-  //     const { status } =
-  //       await ImagePicker.requestMediaLibraryPermissionsAsync();
-  //     if (status !== "granted") {
-  //       console.error("Media library permission not granted");
-  //     }
-  //   }
 
-  //   requestPermissions();
-  // }, []);
 
   const handleDateChange = (event, selectedDate) => {
     const currentDate = selectedDate || date;
@@ -130,30 +120,6 @@ const AddPatient = () => {
     setShow(true);
   };
 
-  // const pickImage = async () => {
-  //   try {
-  //     const result = await launchImageLibraryAsync();
-
-  //     console.log("Image Picker Result:", result);
-
-  //     if (!result.cancelled) {
-  //       const selectedImage = result.assets[0].uri; // Use 'assets' property
-  //       console.log("Selected Image URI:", selectedImage);
-  //       // RNFS.readFile(selectedImage, "utf8")
-  //       //   .then((contents) => {
-  //       //     // setFileContents(contents);
-  //       //     console.log(contents);
-  //       //   })
-  //       //   .catch((err) => {
-  //       //     console.log(err.message);
-  //       //   });
-  //       setImage(selectedImage);
-  //     }
-  //   } catch (error) {
-  //     console.error("Error picking image:", error);
-  //   }
-  // };
-
   const pickImage = async () => {
     try {
       const result = await launchImageLibraryAsync();
@@ -161,36 +127,39 @@ const AddPatient = () => {
       console.log("Image Picker Result:", result);
 
       if (!result.cancelled) {
-        const asset = result.assets[0];
-        const fileUri = Asset.fromModule(asset.uri).uri;
-        setImage(fileUri);
+        const selectedImage = result.assets[0].uri; // Use 'assets' property
+        console.log("Selected Image URI:", selectedImage);
+        
+
+        const response = await fetch(selectedImage);
+        const blob = await response.blob();
+        console.log(blob);
+
+        const storage = getStorage();
+        const storageRef = sRef(
+          storage,
+          `patientImage_${Date.now().toString()}.jpg`
+        );
+
+        // 'file' comes from the Blob or File API
+        uploadBytes(storageRef, blob)
+          .then((snapshot) => {
+            console.log("Uploaded a blob or file!");
+          })
+          .catch((err) => {
+            console.log(err);
+          });
+        
+
+        //   .child("images/" + imageName);
+        // await storageRef.put(blob);
       }
     } catch (error) {
       console.error("Error picking image:", error);
     }
   };
 
-  const uploadImage = async (imageUri) => {
-    try {
-      const fileName = `patientImage_${Date.now().toString()}.jpg`;
-
-      const storageRef = sRef(storage, `patientImages/${fileName}`);
-
-      const metadata = {
-        contentType: "image/jpeg",
-      };
-
-      await uploadBytes(storageRef, imageUri, metadata);
-
-      const imageUrl = await getDownloadURL(storageRef);
-      console.log("Image uploaded successfully. URL:", imageUrl);
-
-      return imageUrl;
-    } catch (error) {
-      console.error("Error uploading image:", error);
-      throw error;
-    }
-  };
+  
 
   const handleAddPatient = async () => {
     try {
@@ -324,7 +293,7 @@ const AddPatient = () => {
             </TouchableOpacity>
             {image && (
               <Image
-                source={{ uri: image }}
+                source={{ uri:image }}
                 style={{ width: 200, height: 200, marginTop: 10 }}
               />
             )}
