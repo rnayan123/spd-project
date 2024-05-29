@@ -22,18 +22,17 @@
 
 To get started with the app, follow these steps:
 
-1. Clone this repo to your local machine using `https://github.com/mhamzashaikh/React-Native-Patient-Tracker-App.git`
-2. Install all dependencies by running `npm install`
-3. Create a Firebase RealTime DB project and configure it in `firebaseConfig.js`
-4. Start the app with `expo start`
-5. Use an emulator or scan the QR code to launch the app on your device.
+1. Install all dependencies by running `npm install
+2. Create a Firebase RealTime DB project and configure it in `firebaseConfig.js`
+3. Start the app with `expo start`
+4. Use an emulator or scan the QR code to launch the app on your device.
 
 ## Try It Out
 
 You can try out the Patient Tracker App by following these steps:
 
 1. Install the Expo Go app on your mobile device.
-2. Open the Expo Go app and scan the QR code from this link: https://expo.dev/@hamzashaikh456/patient-tracker-app
+2. Open the Expo Go app and scan the QR code 
 
 
 
